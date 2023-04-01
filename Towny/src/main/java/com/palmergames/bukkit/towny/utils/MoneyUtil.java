@@ -5,6 +5,8 @@ import com.palmergames.bukkit.towny.object.Translatable;
 import java.io.File;
 import java.util.function.Function;
 
+import net.kyori.adventure.text.Component;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -81,7 +83,7 @@ public class MoneyUtil {
 			} else {
 				// Deposit into town from a nation member.
 				resident.getAccount().payTo(amount, town, "Town Deposit from Nation member");
-				TownyMessaging.sendPrefixedNationMessage(nation, Translatable.of("msg_xx_deposited_xx", resident.getName(), amount, Translatable.literal(town.getName() + " ").append(Translatable.of("town_sing"))));
+				TownyMessaging.sendPrefixedNationMessage(nation, Translatable.of("msg_xx_deposited_xx", resident.getName(), amount, Component.text(town.getName() + " ").append(Translatable.of("town_sing"))));
 			}
 			
 			BukkitTools.fireEvent(new TownTransactionEvent(town, transaction));
