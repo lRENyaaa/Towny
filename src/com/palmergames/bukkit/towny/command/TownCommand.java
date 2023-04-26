@@ -3677,7 +3677,7 @@ public class TownCommand extends BaseCommand implements CommandExecutor {
 			checkPermOrThrow(player, PermissionNodes.TOWNY_COMMAND_TOWN_CLAIM_OUTPOST.getNode());
 			
 			// Run various tests required by configuration/permissions through Util.
-			OutpostUtil.OutpostTests(town, resident, world, key, isAdmin, false);
+			OutpostUtil.OutpostTests(town, resident, world, key, isAdmin);
 			
 			if (!TownyAPI.getInstance().isWilderness(plugin.getCache(player).getLastLocation()))
 				throw new TownyException(Translatable.of("msg_already_claimed_1", key));

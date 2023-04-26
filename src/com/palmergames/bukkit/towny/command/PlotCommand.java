@@ -628,7 +628,7 @@ public class PlotCommand extends BaseCommand implements CommandExecutor {
 		TownyWorld townyWorld = townBlock.getWorld();
 		Coord key = Coord.parseCoord(plugin.getCache(player).getLastLocation());
 		
-		if (OutpostUtil.OutpostTests(town, resident, townyWorld, key, resident.isAdmin(), true)) {
+		if (OutpostUtil.OutpostTests(town, resident, townyWorld, key, resident.isAdmin())) {
 			// Test if they can pay.
 			if (TownyEconomyHandler.isActive() && !town.getAccount().canPayFromHoldings(TownySettings.getOutpostCost())) 
 				throw new TownyException(Translatable.of("msg_err_cannot_afford_to_set_outpost"));
