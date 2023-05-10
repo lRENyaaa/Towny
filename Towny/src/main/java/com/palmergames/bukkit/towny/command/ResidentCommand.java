@@ -35,6 +35,8 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -132,17 +134,16 @@ public class ResidentCommand extends BaseCommand implements CommandExecutor {
 	}
 
 	@Override
-	public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String[] args) {
+	public boolean onCommand(@NotNull CommandSender sender, @NotNull Command cmd, @NotNull String label, String[] args) {
 		
-		if (sender instanceof Player) {
+		if (sender instanceof Player player) {
 			if (plugin.isError()) {
 				TownyMessaging.sendErrorMsg(sender, "Locked in Safe mode!");
 				return false;
 			}
-			Player player = (Player) sender;
+
 			if (args == null) {
 				HelpMenu.RESIDENT_HELP.send(player);
-				parseResidentCommand(player, args);
 			} else {
 				parseResidentCommand(player, args);
 			}
@@ -219,7 +220,7 @@ public class ResidentCommand extends BaseCommand implements CommandExecutor {
 				default:
 					if (args.length == 1)
 						return filterByStartOrGetTownyStartingWith(TownyCommandAddonAPI.getTabCompletes(CommandType.RESIDENT, residentTabCompletes), args[0], "r");
-					else if (args.length > 1 && TownyCommandAddonAPI.hasCommand(CommandType.RESIDENT, args[0]))
+					else if (TownyCommandAddonAPI.hasCommand(CommandType.RESIDENT, args[0]))
 						return NameUtil.filterByStart(TownyCommandAddonAPI.getAddonCommand(CommandType.RESIDENT, args[0]).getTabCompletion(sender, args), args[args.length-1]);
 			}
 		} else if (args.length == 1){
@@ -335,7 +336,6 @@ public class ResidentCommand extends BaseCommand implements CommandExecutor {
 
 				} else {
 					HelpMenu.RESIDENT_JAIL_HELP.send(player);
-					return;
 				}
 
 			} else if (split[0].equalsIgnoreCase("set")) {
@@ -378,14 +378,10 @@ public class ResidentCommand extends BaseCommand implements CommandExecutor {
 
 	/**
 	 * Toggle modes for this player.
-	 * 
-	 * @param player
-	 * @param newSplit
-	 * @throws TownyException
 	 */
 	private void residentToggle(Player player, String[] newSplit) throws TownyException {
 		Resident resident = TownyUniverse.getInstance().getResidentOpt(player.getUniqueId())
-							.orElseThrow(() -> new TownyException(Translatable.of("msg_err_not_registered_1", player.getName())));;
+							.orElseThrow(() -> new TownyException(Translatable.of("msg_err_not_registered_1", player.getName())));
 
 		if (newSplit.length == 0) {
 			HelpMenu.RESIDENT_TOGGLE.send(player);
@@ -417,10 +413,11 @@ public class ResidentCommand extends BaseCommand implements CommandExecutor {
 		} else if (newSplit[0].equalsIgnoreCase("pvp")) {
 			checkPermOrThrow(player, PermissionNodes.TOWNY_COMMAND_RESIDENT_TOGGLE_PVP.getNode());
 			
+			Town town = resident.getTownOrNull();
 			// Test to see if the pvp cooldown timer is active for the town this resident belongs to.
-			if (TownySettings.getPVPCoolDownTime() > 0 && resident.hasTown() && !resident.isAdmin()) {
-				if (CooldownTimerTask.hasCooldown(resident.getTownOrNull().getUUID().toString(), CooldownType.PVP))
-					throw new TownyException(Translatable.of("msg_err_cannot_toggle_pvp_x_seconds_remaining", CooldownTimerTask.getCooldownRemaining(resident.getTownOrNull().getUUID().toString(), CooldownType.PVP))); 
+			if (TownySettings.getPVPCoolDownTime() > 0 && town != null && !resident.isAdmin()) {
+				if (CooldownTimerTask.hasCooldown(town.getUUID().toString(), CooldownType.PVP))
+					throw new TownyException(Translatable.of("msg_err_cannot_toggle_pvp_x_seconds_remaining", CooldownTimerTask.getCooldownRemaining(town.getUUID().toString(), CooldownType.PVP))); 
 				if (CooldownTimerTask.hasCooldown(resident.getName(), CooldownType.PVP))
 					throw new TownyException(Translatable.of("msg_err_cannot_toggle_pvp_x_seconds_remaining", CooldownTimerTask.getCooldownRemaining(resident.getName(), CooldownType.PVP)));
 
@@ -458,9 +455,6 @@ public class ResidentCommand extends BaseCommand implements CommandExecutor {
 
 	/**
 	 * Show the player the new Permission settings after the toggle.
-	 * 
-	 * @param player
-	 * @param perm
 	 */
 	private void notifyPerms(Player player, TownyPermission perm) {
 
@@ -509,20 +503,16 @@ public class ResidentCommand extends BaseCommand implements CommandExecutor {
 	 */
 
 	public void residentSet(Player player, String[] split) throws TownyException {
-		TownyUniverse townyUniverse = TownyUniverse.getInstance();
-
 		if (split.length == 0) {
 			TownyMessaging.sendMessage(player, ChatTools.formatCommand("", "/resident set", "perm ...", "'/resident set perm' " + Translatable.of("res_5").forLocale(player)));
 			TownyMessaging.sendMessage(player, ChatTools.formatCommand("", "/resident set", "mode ...", "'/resident set mode' " + Translatable.of("res_5").forLocale(player)));
 		} else {
-			Optional<Resident> resOpt = townyUniverse.getResidentOpt(player.getUniqueId());
+			Resident resident = TownyAPI.getInstance().getResident(player);
 			
-			if (!resOpt.isPresent()) {
+			if (resident == null) {
 				TownyMessaging.sendErrorMsg(player, Translatable.of("msg_err_not_registered_1", player.getName()));
 				return;
 			}
-
-			Resident resident = resOpt.get();
 
 			if (split[0].equalsIgnoreCase("perm")) {
 
@@ -588,14 +578,12 @@ public class ResidentCommand extends BaseCommand implements CommandExecutor {
 			TownyMessaging.sendMessage(player, ChatTools.formatCommand("", "/resident friend", "clear", ""));
 		} else {
 			if (!admin) {
-				Optional<Resident> resOpt = townyUniverse.getResidentOpt(player.getUniqueId());
+				TownyAPI.getInstance().getResident(player);
 
-				if (!resOpt.isPresent()) {
+				if (resident == null) {
 					TownyMessaging.sendErrorMsg(player, Translatable.of("msg_err_not_registered_1", player.getName()));
 					return;
 				}
-				
-				resident = resOpt.get();
 			}
 
 			if (split[0].equalsIgnoreCase("add")) {

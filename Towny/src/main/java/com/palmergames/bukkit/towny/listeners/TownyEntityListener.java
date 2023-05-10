@@ -179,12 +179,15 @@ public class TownyEntityListener implements Listener {
 
 		Entity entity = event.getEntity();
 
-		if (!TownyAPI.getInstance().isTownyWorld(entity.getWorld()) || TownyAPI.getInstance().isWilderness(entity.getLocation()))
+		if (!TownyAPI.getInstance().isTownyWorld(entity.getWorld()))
 			return;
 		
-		if (entity instanceof Monster)
-			if (TownyAPI.getInstance().getTownBlock(entity.getLocation()).getType() == TownBlockType.ARENA)
-				event.getDrops().clear();
+		TownBlock townBlock = TownyAPI.getInstance().getTownBlock(entity.getLocation());
+		if (townBlock == null)
+			return;
+		
+		if (entity instanceof Monster && townBlock.getType() == TownBlockType.ARENA)
+			event.getDrops().clear();
 	}
 	
 	/**
@@ -225,7 +228,7 @@ public class TownyEntityListener implements Listener {
 		if (!TownyAPI.getInstance().isTownyWorld(event.getEntity().getWorld()))
 			return;
 		
-		if (!event.getEntity().getCustomEffects().stream().anyMatch(effect -> effect.getType().equals(PotionEffectType.HARM)))
+		if (event.getEntity().getCustomEffects().stream().noneMatch(effect -> effect.getType().equals(PotionEffectType.HARM)))
 			return;
 
 		if (!(event.getEntity().getSource() instanceof Player) || !(event.getEntity().getSource() instanceof DragonFireball))
@@ -279,7 +282,7 @@ public class TownyEntityListener implements Listener {
 			return;
 		
 		Location loc = potion.getLocation();		
-		TownyWorld townyWorld = TownyAPI.getInstance().getTownyWorld(loc.getWorld());
+		TownyWorld townyWorld = TownyAPI.getInstance().getTownyWorld(potion.getWorld());
 		float radius = event.getAreaEffectCloud().getRadius();
 		List<Block> blocks = new ArrayList<>();
 		
@@ -359,8 +362,10 @@ public class TownyEntityListener implements Listener {
 			return;
 		}
 
+		final TownyWorld townyWorld = TownyAPI.getInstance().getTownyWorld(event.getEntity().getWorld());
+
 		// ignore non-Towny worlds.
-		if (!TownyAPI.getInstance().isTownyWorld(event.getEntity().getWorld()))
+		if (townyWorld == null || !townyWorld.isUsingTowny())
 			return;
 
 		// ignore Citizens NPCs and named-mobs (if configured.) 
@@ -368,7 +373,6 @@ public class TownyEntityListener implements Listener {
 		if (entityIsExempt(livingEntity))
 			return;
 
-		final TownyWorld townyWorld = TownyAPI.getInstance().getTownyWorld(event.getEntity().getWorld());
 		if (disallowedWorldMob(townyWorld.hasWorldMobs(), livingEntity)) {
 			// Handle mob removal world-wide. 
 			if (weAreAllowedToRemoveThis(livingEntity))
@@ -456,16 +460,14 @@ public class TownyEntityListener implements Listener {
 		 * Allow players in vehicles to activate pressure plates if they
 		 * are permitted.
 		 */
-		if (passengers != null) {
-			for (Entity passenger : passengers) {
-				if (!(passenger instanceof Player player))
-					continue;
+		for (Entity passenger : passengers) {
+			if (!(passenger instanceof Player player))
+				continue;
 
-				if (TownySettings.isSwitchMaterial(block.getType(), block.getLocation())) {
-					//Make decision on whether this is allowed using the PlayerCache and then a cancellable event.
-					event.setCancelled(!TownyActionEventExecutor.canSwitch(player, block.getLocation(), block.getType()));
-					return;
-				}
+			if (TownySettings.isSwitchMaterial(block.getType(), block.getLocation())) {
+				//Make decision on whether this is allowed using the PlayerCache and then a cancellable event.
+				event.setCancelled(!TownyActionEventExecutor.canSwitch(player, block.getLocation(), block.getType()));
+				return;
 			}
 		}
 
@@ -570,9 +572,9 @@ public class TownyEntityListener implements Listener {
 
 	/**
 	 * Decides how explosions made by entities will be handled ie: TNT, Creepers, etc.
-	 * 
+	 * <br>
 	 * Handles wilderness entity explosion regeneration.
-	 * 
+	 * <br>
 	 * Explosion blockList is filtered via the TownyActionEventExecutor,
 	 * allowing Towny's war and other plugins to modify which blocks will
 	 * be exploding.  
@@ -598,7 +600,7 @@ public class TownyEntityListener implements Listener {
 			return;
 		
 		Entity entity = event.getEntity();
-		if (townyWorld.isUsingPlotManagementWildEntityRevert() && entity != null && townyWorld.isProtectingExplosionEntity(entity)) {
+		if (townyWorld.isUsingPlotManagementWildEntityRevert() && townyWorld.isProtectingExplosionEntity(entity)) {
 			int count = 0;
 			for (Block block : event.blockList()) {
 				// Only regenerate in the wilderness.
@@ -618,7 +620,7 @@ public class TownyEntityListener implements Listener {
 
 	/**
 	 * Prevent fire arrows and charges igniting players when PvP is disabled
-	 * 
+	 * <br>
 	 * Can also prevent tnt from destroying armorstands
 	 * 
 	 * @param event - EntityCombustByEntityEvent
@@ -742,13 +744,11 @@ public class TownyEntityListener implements Listener {
 			remover = projectile.getShooter();
 
 		if (remover instanceof Player player) {
-			if (!allowedToBreak(player, hanging))
-				// Player doesn't have permission to break this hanging entity.
-				return true;
+			// Player doesn't have permission to break this hanging entity.
+			return !allowedToBreak(player, hanging);
 		} else if (remover instanceof Entity) {
-			if (!TownyAPI.getInstance().isWilderness(hanging.getLocation()))
-				// An entity (probably a skeleton,) breaking a hanging entity in a town.
-				return true;
+			// An entity (probably a skeleton,) breaking a hanging entity in a town.
+			return !TownyAPI.getInstance().isWilderness(hanging.getLocation());
 		}
 		return false;
 	}

@@ -1,6 +1,7 @@
 package com.palmergames.bukkit.towny.command;
 
 import com.palmergames.bukkit.towny.Towny;
+import com.palmergames.bukkit.towny.TownyAPI;
 import com.palmergames.bukkit.towny.TownyMessaging;
 import com.palmergames.bukkit.towny.TownySettings;
 import com.palmergames.bukkit.towny.TownyUniverse;
@@ -20,13 +21,14 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.InvalidObjectException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 public class InviteCommand extends BaseCommand implements CommandExecutor {
@@ -36,7 +38,7 @@ public class InviteCommand extends BaseCommand implements CommandExecutor {
 		TownySettings.getDenyCommand()
 	);
 	
-	private static Towny plugin;
+	private final Towny plugin;
 
 	public InviteCommand(Towny instance) {
 		plugin = instance;
@@ -44,44 +46,40 @@ public class InviteCommand extends BaseCommand implements CommandExecutor {
 	
 	@Override
 	public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-		
-		switch (args.length) {
-			case 1:
-				return NameUtil.filterByStart(inviteTabCompletes, args[0]);
-			case 2:
-				switch (args[0].toLowerCase()) {
-					case "accept":
-					case "deny": {
-						if (sender instanceof Player) {
-							Resident res = TownyUniverse.getInstance().getResident(((Player) sender).getUniqueId());
-							if (res != null) {
-								return NameUtil.filterByStart(
-									res.getReceivedInvites()
+
+		return switch (args.length) {
+			case 1 -> NameUtil.filterByStart(inviteTabCompletes, args[0]);
+			case 2 -> switch (args[0].toLowerCase(Locale.ROOT)) {
+				case "accept", "deny" -> {
+					if (sender instanceof Player player) {
+						Resident res = TownyUniverse.getInstance().getResident(player.getUniqueId());
+						if (res != null) {
+							yield NameUtil.filterByStart(
+								res.getReceivedInvites()
 									.stream()
 									.map(Invite::getSender)
 									.map(InviteSender::getName)
 									.collect(Collectors.toList()),
-									args[1]);
-							}
+								args[1]);
 						}
 					}
-					default:
-						return Collections.emptyList();
+					yield Collections.emptyList();
 				}
-			default:
-				return Collections.emptyList();
-		}
+				default -> Collections.emptyList();
+			};
+			default -> Collections.emptyList();
+		};
 	}
 	
 	@Override
-	public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+	public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
 		
-		if (sender instanceof Player) {
+		if (sender instanceof Player player) {
 			if (plugin.isError()) {
 				TownyMessaging.sendErrorMsg(sender, "Locked in Safe mode!");
 				return false;
 			}
-			Player player = (Player) sender;
+
 			if (command.getName().equalsIgnoreCase("invite")) {
 				parseInviteCommand(player, args);
 			}
@@ -109,15 +107,13 @@ public class InviteCommand extends BaseCommand implements CommandExecutor {
 	private static void parseInviteList(Player player, String[] split) {
 		// Now we check the size of the player invites, if there is more than 10 invites (not possible), We only displayed the first 10.
 		// /invite args[0] args[1}
-		Optional<Resident> resOpt = TownyUniverse.getInstance().getResidentOpt(player.getUniqueId());
+		Resident resident = TownyAPI.getInstance().getResident(player);
 		
-		if (!resOpt.isPresent()) {
+		if (resident == null) {
 			TownyMessaging.sendErrorMsg(player, Translatable.of("msg_err_not_registered"));
 			return;
 		}
 		
-		Resident resident = resOpt.get();
-
 		String received = Translatable.of("player_received_invites").forLocale(player)
 				.replace("%a", Integer.toString(resident.getReceivedInvites().size())
 				)
@@ -146,15 +142,13 @@ public class InviteCommand extends BaseCommand implements CommandExecutor {
 	}
 
 	public static void parseDeny(Player player, String[] args) {
-		TownyUniverse townyUniverse = TownyUniverse.getInstance();
-		Optional<Resident> resOpt = townyUniverse.getResidentOpt(player.getUniqueId());
+		Resident resident = TownyAPI.getInstance().getResident(player);
 		
-		if (!resOpt.isPresent()) {
+		if (resident == null) {
 			TownyMessaging.sendErrorMsg(player, Translatable.of("msg_err_not_registered"));
 			return;
 		}
 		
-		Resident resident = resOpt.get();
 		List<Invite> invites = resident.getReceivedInvites();
 
 		if (invites.size() == 0) {
@@ -173,7 +167,7 @@ public class InviteCommand extends BaseCommand implements CommandExecutor {
 				return;
 			}
 
-			town = townyUniverse.getTown(args[0]);
+			town = TownyAPI.getInstance().getTown(args[0]);
 			
 			if (town == null) {
 				TownyMessaging.sendErrorMsg(player, Translatable.of("msg_invalid_name"));
@@ -218,15 +212,13 @@ public class InviteCommand extends BaseCommand implements CommandExecutor {
 	}
 
 	public static void parseAccept(Player player, String[] args) {
-		TownyUniverse townyUniverse = TownyUniverse.getInstance();
-		Optional<Resident> resOpt = townyUniverse.getResidentOpt(player.getUniqueId());
+		Resident resident = TownyAPI.getInstance().getResident(player);
 
-		if (!resOpt.isPresent()) {
+		if (resident == null) {
 			TownyMessaging.sendErrorMsg(player, Translatable.of("msg_err_not_registered"));
 			return;
 		}
 
-		Resident resident = resOpt.get();
 		List<Invite> invites = resident.getReceivedInvites();
 		if (invites.size() == 0) {
 			TownyMessaging.sendErrorMsg(player, Translatable.of("msg_err_player_no_invites"));
@@ -235,7 +227,7 @@ public class InviteCommand extends BaseCommand implements CommandExecutor {
 
 		Town town;
 		if (args.length >= 1) {
-			town = townyUniverse.getTown(args[0]);
+			town = TownyAPI.getInstance().getTown(args[0]);
 			
 			if (town == null) {
 				TownyMessaging.sendErrorMsg(player, Translatable.of("msg_invalid_name"));
@@ -266,11 +258,15 @@ public class InviteCommand extends BaseCommand implements CommandExecutor {
 				if (TownySettings.getMaxResidentsPerTown() > 0 && town.getResidents().size() >= TownySettings.getMaxResidentsForTown(town)) {
 					TownyMessaging.sendMsg(player, Translatable.of("msg_err_max_residents_per_town_reached", TownySettings.getMaxResidentsForTown(town)));
 					return;
-				} else if (town.hasNation() && TownySettings.getMaxResidentsPerNation() > 0 && town.getNationOrNull().getResidents().size() >= TownySettings.getMaxResidentsPerNation()) {
+				}
+				
+				Nation nation = town.getNationOrNull();
+				if (nation != null && TownySettings.getMaxResidentsPerNation() > 0 && nation.getResidents().size() >= TownySettings.getMaxResidentsPerNation()) {
 					TownyMessaging.sendMsg(player, Translatable.of("msg_err_cannot_join_nation_over_resident_limit", TownySettings.getMaxResidentsPerNation()));
 					return;
-				} else
-					InviteHandler.acceptInvite(toAccept);
+				}
+
+				InviteHandler.acceptInvite(toAccept);
 			} catch (TownyException | InvalidObjectException e) {
 				e.printStackTrace();
 			}
@@ -298,13 +294,13 @@ public class InviteCommand extends BaseCommand implements CommandExecutor {
 		if ((page * 10) > list.size()) {
 			iMax = list.size();
 		}
-		Translatable object = null;
+		Translatable object = Translatable.literal("null");
 		for (int i = (page - 1) * 10; i < iMax; i++) {
 			Invite invite = list.get(i);
 			String name = invite.getSenderName();
 			
 			// If it's from the sender, do it differently
-			String output = null;
+			String output;
 			if (fromSender) {
 				output = Colors.Blue + invite.getReceiver().getName() + Colors.Gray + " - " + Colors.Green + name;
 				if (invite.getSender() instanceof Town) { // If it's sent by a town to a resident
