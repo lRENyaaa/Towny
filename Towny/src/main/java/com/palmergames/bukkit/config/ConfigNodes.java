@@ -1,5 +1,7 @@
 package com.palmergames.bukkit.config;
 
+import java.util.HashMap;
+
 public enum ConfigNodes {
 	VERSION_HEADER("version", "", ""),
 	VERSION(
@@ -2989,17 +2991,24 @@ public enum ConfigNodes {
 	ASCII_MAP_SYMBOLS_WILDERNESS("ascii_map_symbols.wilderness",
 			"-",
 			"",
-			"# The character used for plots which are unclaimed.");
+			"# The character used for plots which are unclaimed."),
+	CUSTOM_LISTS("custom_lists", "", ""), // TODO documentation in this comment
+	CUSTOM_LISTS_ITEM_LISTS("custom_lists.item_lists",
+		new HashMap<>(),
+		""),
+	CUSTOM_LISTS_ENTITY_LISTS("custom_lists.entity_lists",
+		new HashMap<>(),
+		"");
 
 	
-	private final String Root;
-	private final String Default;
-	private String[] comments;
+	private final String root;
+	private final Object defaultValue;
+	private final String[] comments;
 
-	ConfigNodes(String root, String def, String... comments) {
+	ConfigNodes(String root, Object def, String... comments) {
 
-		this.Root = root;
-		this.Default = def;
+		this.root = root;
+		this.defaultValue = def;
 		this.comments = comments;
 	}
 
@@ -3010,7 +3019,7 @@ public enum ConfigNodes {
 	 */
 	public String getRoot() {
 
-		return Root;
+		return root;
 	}
 
 	/**
@@ -3020,7 +3029,16 @@ public enum ConfigNodes {
 	 */
 	public String getDefault() {
 
-		return Default;
+		return defaultValue.toString();
+	}
+
+	/**
+	 * Retrieves the default value for a config path
+	 *
+	 * @return The default value for a config path
+	 */
+	public Object defaultValue() {
+		return this.defaultValue;
 	}
 
 	/**
