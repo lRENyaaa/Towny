@@ -38,6 +38,7 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
 import org.bukkit.Tag;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.EntityType;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -547,9 +548,12 @@ public class TownySettings {
 	public static Map<String, String> getMap(ConfigNodes node) {
 		final Map<String, String> map = new HashMap<>();
 		
-		for (final Map<?, ?> generic : config.getMapList(node.getRoot()))
-			for (Map.Entry<?, ?> entry : generic.entrySet())
-				map.put(entry.getKey().toString(), entry.getValue().toString());
+		final ConfigurationSection section = config.getConfigurationSection(node.getRoot());
+		if (section == null)
+			return map;
+		
+		for (String key : section.getKeys(false))
+			map.put(key, section.getString(key));
 		
 		return map;
 	}
@@ -1029,7 +1033,7 @@ public class TownySettings {
 		return true;
 	}
 	
-	private static final List<String> REGISTRY_LIST_PACKAGES = List.of(
+	private static final List<String> REGISTRY_LIST_PACKAGES = Arrays.asList(
 		"org.bukkit.entity",
 		"org.bukkit.entity.minecart",
 		"org.bukkit.block.data",
