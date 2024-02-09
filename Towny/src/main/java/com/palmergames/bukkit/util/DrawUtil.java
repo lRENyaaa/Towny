@@ -1,5 +1,6 @@
 package com.palmergames.bukkit.util;
 
+import com.palmergames.bukkit.towny.Towny;
 import org.bukkit.HeightMap;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -25,7 +26,7 @@ public class DrawUtil {
 	 * @param locationConsumer A consumer for accepting locations
 	 */
 	public static void runOnSurface(World world, int x1, int z1, int x2, int z2, int height, Consumer<Location> locationConsumer) {
-
+		
 		int _x1 = Math.min(x1, x2);
 		int _x2 = Math.max(x1, x2);
 		int _z1 = Math.min(z1, z2);
@@ -37,11 +38,16 @@ public class DrawUtil {
 					continue;
 				}
 
-				int start = world.getHighestBlockYAt(x, z, HeightMap.MOTION_BLOCKING_NO_LEAVES);
-				int end = (start + height) < world.getMaxHeight() ? (start + height - 1) : world.getMaxHeight();
-				for (int y = start; y <= end; y++) {
-					locationConsumer.accept(new Location(world, x, y, z));
-				}
+				int finalX = x;
+				int finalZ = z;
+				Towny.getPlugin().getScheduler().run(world, x >> 4, z >> 4, () -> {
+					int start = world.getHighestBlockYAt(finalX, finalZ, HeightMap.MOTION_BLOCKING_NO_LEAVES);
+					int end = (start + height) < world.getMaxHeight() ? (start + height - 1) : world.getMaxHeight();
+					for (int y = start; y <= end; y++) {
+						locationConsumer.accept(new Location(world, finalX, y, finalZ));
+					}
+				});
+				
 			}
 		}
 	}

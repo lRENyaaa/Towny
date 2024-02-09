@@ -1,6 +1,7 @@
 package com.palmergames.bukkit.towny.scheduling;
 
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.checkerframework.framework.qual.DefaultQualifier;
 import org.jetbrains.annotations.NotNull;
@@ -22,6 +23,10 @@ public interface TaskScheduler {
 	}
 
 	default ScheduledTask run(Location location, Runnable runnable) {
+		return run(runnable);
+	}
+
+	default ScheduledTask run(World world, int chunkX, int chunkZ, Runnable runnable) {
 		return run(runnable);
 	}
 	

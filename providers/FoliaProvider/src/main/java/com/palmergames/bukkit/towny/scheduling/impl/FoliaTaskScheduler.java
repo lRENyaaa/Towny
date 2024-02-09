@@ -7,6 +7,7 @@ import io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler;
 import io.papermc.paper.threadedregions.scheduler.RegionScheduler;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
@@ -56,6 +57,11 @@ public class FoliaTaskScheduler implements TaskScheduler {
 	@Override
 	public @NotNull ScheduledTask run(@NotNull Location location, @NotNull Runnable runnable) {
 		return new FoliaScheduledTask(regionScheduler.run(this.plugin, location, task -> runnable.run()));
+	}
+
+	@Override
+	public @NotNull ScheduledTask run(@NotNull World world, int chunkX, int chunkZ, @NotNull Runnable runnable) {
+		return new FoliaScheduledTask(regionScheduler.run(this.plugin, world, chunkX, chunkZ, task -> runnable.run()));
 	}
 
 	@Override
